@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZAN ESCROW MARKET</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<style>
+body{background:#020617;color:white;font-family:sans-serif;padding:15px}
+input,button{margin:5px;padding:10px;border-radius:8px;border:none;width:90%}
+button{background:#38bdf8;color:white;cursor:pointer}
+.card{background:#111;padding:12px;margin:10px 0;border-radius:12px}
+.popup{
+display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.8);justify-content:center;align-items:center;
+}
+.box{background:#020617;padding:20px;border-radius:15px;text-align:center;width:90%;max-width:320px}
+</style>
+</head>
+
+<body>
+
+<h2>🔥 ESCROW MARKETPLACE</h2>
+
+<!-- LOGIN -->
+<div id="auth">
+<input id="email" placeholder="Email"><br>
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="login()">Login / Register</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+<h3>💰 Saldo: Rp <span id="saldo">0</span></h3>
+<button onclick="topup()">Top Up</button>
+
+<hr>
+
+<h3>📤 JUAL AKUN</h3>
+<input id="uidff" placeholder="UID FF"><br>
+<input id="password" placeholder="Password akun"><br>
+<input id="harga" placeholder="Harga"><br>
+<button onclick="jual()">Jual</button>
+
+<hr>
+
+<h3>🛒 MARKETPLACE</h3>
+<div id="list"></div>
+
+</div>
+
+<!-- TOPUP -->
+<div class="popup" id="topupBox">
+<div class="box">
+<h3>💰 Top Up</h3>
+<img src="https://raw.githubusercontent.com/zannhengsut642-web/WEBSHOPZAN/main/qris.jpg" width="200"><br><br>
+<input id="nominalTopup" placeholder="Nominal"><br>
+<button onclick="kirimBukti()">Kirim Bukti</button>
+<button onclick="tutupTopup()">Tutup</button>
+</div>
+</div>
+
+<script>
+
+/* FIREBASE */
+var firebaseConfig = {
+apiKey: "AIzaSyBPHIMSfTPborU-P4stCb88ZpAtqWHWx54",
+authDomain: "zanstore-96e12.firebaseapp.com",
+projectId: "zanstore-96e12",
+storageBucket: "zanstore-96e12.firebasestorage.app",
+messagingSenderId: "852219530181",
+appId: "1:852219530181:web:47a8521243a59ecca819ac"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+var auth = firebase.auth();
+var db = firebase.firestore();
+var uid = "";
+
+/* LOGIN */
+function login(){
+let email=document.getElementById("email").value;
+let pass=document.getElementById("pass").value;
+
+auth.signInWithEmailAndPassword(email,pass)
+.catch(()=>auth.createUserWithEmailAndPassword(email,pass));
+}
+
+/* SESSION */
+auth.onAuthStateChanged(user=>{
+if(user){
+uid=user.uid;
+document.getElementById("auth").style.display="none";
+document.getElementById("app").style.display="block";
+loadUser();
+loadMarket();
+}
+});
+
+/* USER */
+function loadUser(){
+let ref=db.collection("users").doc(uid);
+
+ref.get().then(d=>{
+if(!d.exists) ref.set({saldo:0});
+});
+
+ref.onSnapshot(d=>{
+document.getElementById("saldo").innerText=d.data().saldo;
+});
+}
+
+/* TOPUP */
+function topup(){
+document.getElementById("topupBox").style.display="flex";
+}
+function tutupTopup(){
+document.getElementById("topupBox").style.display="none";
+}
+
+function kirimBukti(){
+let n=document.getElementById("nominalTopup").value;
+let admin="6282326978091";
+
+window.open("https://wa.me/"+admin+"?text="+encodeURIComponent(
+`TOPUP\nNominal:${n}\nUID:${uid}`
+));
+}
+
+/* JUAL */
+function jual(){
+let uidff=document.getElementById("uidff").value;
+let password=document.getElementById("password").value;
+let harga=parseInt(document.getElementById("harga").value);
+
+if(!uidff||!password||!harga){
+alert("Isi semua!");
+return;
+}
+
+db.collection("market").add({
+uidff:uidff,
+password:password,
+harga:harga,
+seller:uid,
+sold:false
+});
+
+alert("Akun dijual!");
+}
+
+/* MARKET */
+function loadMarket(){
+db.collection("market").onSnapshot(snap=>{
+let html="";
+
+snap.forEach(doc=>{
+let d=doc.data();
+
+html+=`
+<div class="card">
+<b>UID: ${d.uidff}</b><br>
+Rp ${d.harga}<br>
+
+${d.sold 
+? "<b style='color:red'>SOLD</b>"
+: `<button onclick="beli('${doc.id}',${d.harga},'${d.seller}')">Beli</button>`}
+</div>`;
+});
+
+document.getElementById("list").innerHTML=html;
+});
+}
+
+/* BELI (ESCROW) */
+function beli(id,harga,seller){
+
+let userRef=db.collection("users").doc(uid);
+let sellerRef=db.collection("users").doc(seller);
+let itemRef=db.collection("market").doc(id);
+
+db.runTransaction(async t=>{
+let user=await t.get(userRef);
+let item=await t.get(itemRef);
+
+if(item.data().sold){
+alert("Sudah dibeli!");
+return;
+}
+
+if(user.data().saldo < harga){
+alert("Saldo kurang!");
+return;
+}
+
+/* transfer saldo */
+t.update(userRef,{
+saldo: firebase.firestore.FieldValue.increment(-harga)
+});
+
+t.update(sellerRef,{
+saldo: firebase.firestore.FieldValue.increment(harga)
+});
+
+/* mark sold */
+t.update(itemRef,{sold:true});
+
+/* kasih data ke buyer */
+setTimeout(()=>{
+alert(
+"PEMBELIAN BERHASIL!\n\n"+
+"UID: "+item.data().uidff+"\n"+
+"PASSWORD: "+item.data().password
+);
+},500);
+
+});
+}
+
+</script>
+
+</body>
+</html>
