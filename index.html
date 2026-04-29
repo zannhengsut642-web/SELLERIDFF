@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZAN MARKETPLACE</title>
+<title>ZAN MARKETPLACE SECURE</title>
 
-<!-- FIREBASE CDN -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -16,8 +15,8 @@ input,button{margin:5px;padding:10px;border-radius:8px;border:none}
 button{background:#38bdf8;color:white;cursor:pointer}
 .card{background:#111;padding:10px;margin:10px 0;border-radius:10px}
 .popup{
-  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-  background:rgba(0,0,0,0.8);justify-content:center;align-items:center;
+display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.8);justify-content:center;align-items:center;
 }
 .box{background:#020617;padding:20px;border-radius:15px;text-align:center}
 </style>
@@ -25,51 +24,52 @@ button{background:#38bdf8;color:white;cursor:pointer}
 
 <body>
 
-<h2>🔥 ZAN MARKETPLACE</h2>
+<h2>🔥 ZAN MARKETPLACE (SECURE)</h2>
 
-<!-- LOGIN -->
 <div id="auth">
-  <input id="email" placeholder="Email"><br>
-  <input id="pass" type="password" placeholder="Password"><br>
-  <button onclick="login()">Login / Register</button>
+<input id="email" placeholder="Email"><br>
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="login()">Login / Register</button>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none">
-  <h3>💰 Saldo: Rp <span id="saldo">0</span></h3>
-  <button onclick="topup()">Top Up</button>
+<h3>💰 Saldo: Rp <span id="saldo">0</span></h3>
+<button onclick="topup()">Top Up</button>
 
-  <h3>📤 Jual ID</h3>
-  <input id="idff" placeholder="ID FF"><br>
-  <input id="harga" placeholder="Harga"><br>
-  <button onclick="jual()">Jual</button>
+<h3>📤 Jual ID</h3>
+<input id="idff" placeholder="ID FF"><br>
+<input id="harga" placeholder="Harga"><br>
+<button onclick="jual()">Jual</button>
 
-  <h3>🛒 Marketplace</h3>
-  <div id="list"></div>
+<h3>🛒 Marketplace</h3>
+<div id="list"></div>
 </div>
 
 <!-- POPUP TOPUP -->
 <div class="popup" id="topupBox">
-  <div class="box">
-    <h3>💰 Top Up Saldo</h3>
-    <p>Scan QRIS dibawah</p>
-    <img src="https://raw.githubusercontent.com/zannhengsut642-web/WEBSHOPZAN/main/qris.jpg" width="200"><br><br>
-    <input id="nominalTopup" placeholder="Nominal"><br>
-    <button onclick="kirimBukti()">Kirim Bukti</button>
-    <button onclick="tutupTopup()">Tutup</button>
-  </div>
+<div class="box">
+<h3>💰 Top Up Saldo</h3>
+<p>Scan QRIS lalu kirim bukti</p>
+
+<img src="https://raw.githubusercontent.com/zannhengsut642-web/WEBSHOPZAN/main/qris.jpg" width="200"><br><br>
+
+<input id="nominalTopup" placeholder="Nominal"><br>
+
+<button onclick="kirimBukti()">Kirim Bukti</button>
+<button onclick="tutupTopup()">Tutup</button>
+</div>
 </div>
 
 <script>
 
-/* CONFIG FIREBASE */
+/* FIREBASE CONFIG */
 var firebaseConfig = {
-  apiKey: "AIzaSyBPHIMSfTPborU-P4stCb88ZpAtqWHWx54",
-  authDomain: "zanstore-96e12.firebaseapp.com",
-  projectId: "zanstore-96e12",
-  storageBucket: "zanstore-96e12.firebasestorage.app",
-  messagingSenderId: "852219530181",
-  appId: "1:852219530181:web:47a8521243a59ecca819ac"
+apiKey: "AIzaSyBPHIMSfTPborU-P4stCb88ZpAtqWHWx54",
+authDomain: "zanstore-96e12.firebaseapp.com",
+projectId: "zanstore-96e12",
+storageBucket: "zanstore-96e12.firebasestorage.app",
+messagingSenderId: "852219530181",
+appId: "1:852219530181:web:47a8521243a59ecca819ac"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -80,147 +80,148 @@ var uid = "";
 
 /* LOGIN */
 function login(){
-  var email = document.getElementById("email").value;
-  var pass = document.getElementById("pass").value;
+let email = document.getElementById("email").value;
+let pass = document.getElementById("pass").value;
 
-  if(!email || !pass){
-    alert("Isi email & password!");
-    return;
-  }
+if(!email || !pass){
+alert("Isi email & password!");
+return;
+}
 
-  auth.signInWithEmailAndPassword(email,pass)
-  .catch(function(){
-    auth.createUserWithEmailAndPassword(email,pass);
-  });
+auth.signInWithEmailAndPassword(email,pass)
+.catch(()=> auth.createUserWithEmailAndPassword(email,pass));
 }
 
 /* AUTO LOGIN */
-auth.onAuthStateChanged(function(user){
-  if(user){
-    uid = user.uid;
+auth.onAuthStateChanged(user=>{
+if(user){
+uid = user.uid;
 
-    document.getElementById("auth").style.display="none";
-    document.getElementById("app").style.display="block";
+document.getElementById("auth").style.display="none";
+document.getElementById("app").style.display="block";
 
-    loadUser();
-    loadMarket();
-  }
+loadUser();
+loadMarket();
+}
 });
 
 /* USER */
 function loadUser(){
-  var ref = db.collection("users").doc(uid);
+let ref = db.collection("users").doc(uid);
 
-  ref.get().then(function(doc){
-    if(!doc.exists){
-      ref.set({saldo:0});
-    }
-  });
+ref.get().then(d=>{
+if(!d.exists){
+ref.set({saldo:0});
+}
+});
 
-  ref.onSnapshot(function(doc){
-    if(doc.exists){
-      document.getElementById("saldo").innerText = doc.data().saldo;
-    }
-  });
+ref.onSnapshot(d=>{
+if(d.exists){
+document.getElementById("saldo").innerText = d.data().saldo;
+}
+});
 }
 
-/* TOPUP */
+/* TOPUP (AMAN) */
 function topup(){
-  document.getElementById("topupBox").style.display="flex";
+document.getElementById("topupBox").style.display="flex";
 }
 
 function tutupTopup(){
-  document.getElementById("topupBox").style.display="none";
+document.getElementById("topupBox").style.display="none";
 }
 
 /* KIRIM BUKTI */
 function kirimBukti(){
-  var nominal = document.getElementById("nominalTopup").value;
+let nominal = parseInt(document.getElementById("nominalTopup").value);
 
-  if(!nominal){
-    alert("Isi nominal!");
-    return;
-  }
+if(!nominal || nominal < 1000 || nominal > 1000000){
+alert("Nominal tidak valid!");
+return;
+}
 
-  var nomorAdmin = "6282326978091";
+let nomorAdmin = "6282326978091";
 
-  var pesan = "TOP UP SALDO\nNominal: Rp "+nominal+"\nUser ID: "+uid+"\nSaya sudah transfer, mohon cek.";
+let pesan = `TOP UP SALDO
+Nominal: Rp ${nominal}
+User ID: ${uid}
+Saya sudah transfer, mohon cek.`;
 
-  window.open("https://wa.me/"+nomorAdmin+"?text="+encodeURIComponent(pesan));
+window.open("https://wa.me/"+nomorAdmin+"?text="+encodeURIComponent(pesan));
 }
 
 /* JUAL */
 function jual(){
-  var idff = document.getElementById("idff").value;
-  var harga = parseInt(document.getElementById("harga").value);
+let idff = document.getElementById("idff").value;
+let harga = parseInt(document.getElementById("harga").value);
 
-  if(!idff || !harga){
-    alert("Isi semua!");
-    return;
-  }
+if(!idff || !harga){
+alert("Isi semua!");
+return;
+}
 
-  db.collection("market").add({
-    idff:idff,
-    harga:harga,
-    seller:uid,
-    sold:false
-  });
+db.collection("market").add({
+idff:idff,
+harga:harga,
+seller:uid,
+sold:false
+});
 
-  alert("ID berhasil dijual!");
+alert("ID berhasil dijual!");
 }
 
 /* MARKET */
 function loadMarket(){
-  db.collection("market").onSnapshot(function(snap){
-    var html="";
+db.collection("market").onSnapshot(snap=>{
+let html="";
 
-    snap.forEach(function(doc){
-      var d = doc.data();
+snap.forEach(doc=>{
+let d = doc.data();
 
-      html+=`
-      <div class="card">
-        <b style="word-break:break-all">${d.idff}</b><br>
-        Rp ${d.harga}<br>
-        ${d.sold ? "SOLD" : `<button onclick="beli('${doc.id}',${d.harga},'${d.seller}')">Beli</button>`}
-      </div>`;
-    });
+html+=`
+<div class="card">
+<b style="word-break:break-all">${d.idff}</b><br>
+Rp ${d.harga}<br>
+${d.sold ? "SOLD" : `<button onclick="beli('${doc.id}',${d.harga},'${d.seller}')">Beli</button>`}
+</div>`;
+});
 
-    document.getElementById("list").innerHTML=html;
-  });
+document.getElementById("list").innerHTML=html;
+});
 }
 
 /* BELI */
 function beli(id,harga,seller){
-  var userRef = db.collection("users").doc(uid);
-  var sellerRef = db.collection("users").doc(seller);
-  var itemRef = db.collection("market").doc(id);
+let userRef = db.collection("users").doc(uid);
+let sellerRef = db.collection("users").doc(seller);
+let itemRef = db.collection("market").doc(id);
 
-  db.runTransaction(function(t){
-    return t.get(userRef).then(function(userDoc){
-      return t.get(itemRef).then(function(itemDoc){
+db.runTransaction(t=>{
+return t.get(userRef).then(userDoc=>{
+return t.get(itemRef).then(itemDoc=>{
 
-        if(itemDoc.data().sold){
-          alert("Udah dibeli!");
-          return;
-        }
+if(itemDoc.data().sold){
+alert("Udah dibeli!");
+return;
+}
 
-        if(userDoc.data().saldo < harga){
-          alert("Saldo kurang!");
-          return;
-        }
+if(userDoc.data().saldo < harga){
+alert("Saldo kurang!");
+return;
+}
 
-        t.update(userRef,{
-          saldo: firebase.firestore.FieldValue.increment(-harga)
-        });
+t.update(userRef,{
+saldo: firebase.firestore.FieldValue.increment(-harga)
+});
 
-        t.update(sellerRef,{
-          saldo: firebase.firestore.FieldValue.increment(harga)
-        });
+t.update(sellerRef,{
+saldo: firebase.firestore.FieldValue.increment(harga)
+});
 
-        t.update(itemRef,{sold:true});
-      });
-    });
-  });
+t.update(itemRef,{sold:true});
+});
+});
+});
 }
 
 </script>
