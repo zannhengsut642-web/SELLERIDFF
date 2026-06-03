@@ -2,7 +2,10 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Hand Tracker + Switch Camera</title>
+<title>Stickman Tracker</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
 
 <style>
 body{
@@ -16,151 +19,132 @@ video,canvas{
   left:0;
   width:100vw;
   height:100vh;
+  object-fit:cover;
 }
-#ui{
+#status{
   position:absolute;
   top:10px;
   left:10px;
+  color:white;
+  background:rgba(0,0,0,.6);
+  padding:8px;
+  font-family:Arial;
   z-index:999;
-}
-button{
-  padding:10px;
-  margin:5px;
-  border:none;
-  border-radius:10px;
-  background:cyan;
 }
 </style>
 </head>
-
 <body>
 
-<div id="ui">
-  <button onclick="switchCam()">Switch Camera</button>
-</div>
+<div id="status">Loading...</div>
 
-<video id="video" autoplay playsinline></video>
+<video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
 <script>
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const statusBox = document.getElementById("status");
 
-let currentMode = "environment";
-let detector;
-let stream;
+function drawLine(a,b){
 
-// 🔥 SWITCH CAMERA
-async function switchCam(){
-  currentMode = currentMode === "user" ? "environment" : "user";
-  await startCamera();
-}
-
-// 📷 START CAMERA
-async function startCamera(){
-
-  if(stream){
-    stream.getTracks().forEach(t=>t.stop());
-  }
-
-  stream = await navigator.mediaDevices.getUserMedia({
-    video:{
-      facingMode: currentMode
-    }
-  });
-
-  video.srcObject = stream;
-  await new Promise(r=>video.onloadedmetadata=r);
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-}
-
-// 🖐️ DRAW LINE
-function draw(a,b){
   if(!a || !b) return;
+  if(a.score < 0.3 || b.score < 0.3) return;
 
   ctx.beginPath();
   ctx.moveTo(a.x,a.y);
   ctx.lineTo(b.x,b.y);
-  ctx.strokeStyle="lime";
-  ctx.lineWidth=3;
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 4;
   ctx.stroke();
+
 }
 
-// 🤖 INIT AI
-async function initAI(){
+async function start(){
 
-  detector = await handPoseDetection.createDetector(
-    handPoseDetection.SupportedModels.MediaPipeHands,
-    {
-      runtime:"tfjs",
-      modelType:"lite"
+  const stream =
+  await navigator.mediaDevices.getUserMedia({
+    video:{
+      facingMode:"environment"
     }
-  );
-
-}
-
-// 🔄 DETECT LOOP
-async function detect(){
-
-  const hands = await detector.estimateHands(video);
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  hands.forEach(hand=>{
-
-    const k = hand.keypoints;
-
-    // ibu jari
-    draw(k[0],k[1]);
-    draw(k[1],k[2]);
-    draw(k[2],k[3]);
-    draw(k[3],k[4]);
-
-    // telunjuk
-    draw(k[0],k[5]);
-    draw(k[5],k[6]);
-    draw(k[6],k[7]);
-    draw(k[7],k[8]);
-
-    // tengah
-    draw(k[9],k[10]);
-    draw(k[10],k[11]);
-    draw(k[11],k[12]);
-
-    // manis
-    draw(k[13],k[14]);
-    draw(k[14],k[15]);
-    draw(k[15],k[16]);
-
-    // kelingking
-    draw(k[17],k[18]);
-    draw(k[18],k[19]);
-    draw(k[19],k[20]);
-
   });
 
-  requestAnimationFrame(detect);
-}
+  video.srcObject = stream;
 
-// 🚀 START ALL
-async function start(){
-  await startCamera();
-  await initAI();
+  await new Promise(resolve=>{
+    video.onloadedmetadata = resolve;
+  });
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  statusBox.innerText = "Loading AI...";
+
+  const detector =
+  await poseDetection.createDetector(
+    poseDetection.SupportedModels.MoveNet
+  );
+
+  statusBox.innerText = "Stickman Ready";
+
+  async function detect(){
+
+    const poses =
+    await detector.estimatePoses(video);
+
+    ctx.clearRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    poses.forEach(pose=>{
+
+      const k = pose.keypoints;
+
+      // kepala
+      drawLine(k[0],k[1]);
+      drawLine(k[0],k[2]);
+
+      // bahu
+      drawLine(k[5],k[6]);
+
+      // tangan kiri
+      drawLine(k[5],k[7]);
+      drawLine(k[7],k[9]);
+
+      // tangan kanan
+      drawLine(k[6],k[8]);
+      drawLine(k[8],k[10]);
+
+      // badan
+      drawLine(k[5],k[11]);
+      drawLine(k[6],k[12]);
+      drawLine(k[11],k[12]);
+
+      // kaki kiri
+      drawLine(k[11],k[13]);
+      drawLine(k[13],k[15]);
+
+      // kaki kanan
+      drawLine(k[12],k[14]);
+      drawLine(k[14],k[16]);
+
+    });
+
+    requestAnimationFrame(detect);
+
+  }
+
   detect();
+
 }
 
-start();
+start().catch(err=>{
+  statusBox.innerText = err.message;
+});
 
 </script>
 
