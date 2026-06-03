@@ -1,78 +1,134 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hand Skeleton Camera</title>
+<meta charset="utf-8">
+<title>Finger Skeleton</title>
 
-  <style>
-    body {
-      margin: 0;
-      background: black;
-      overflow: hidden;
-      text-align: center;
-    }
-
-    video, canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-  </style>
+<style>
+body{
+  margin:0;
+  overflow:hidden;
+  background:black;
+}
+video,canvas{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100vw;
+  height:100vh;
+}
+#status{
+  position:absolute;
+  top:10px;
+  left:10px;
+  color:white;
+  background:rgba(0,0,0,.6);
+  padding:8px;
+  font-family:Arial;
+}
+</style>
 </head>
-
 <body>
 
-<video id="video" width="640" height="480" autoplay></video>
-<canvas id="canvas" width="640" height="480"></canvas>
+<div id="status">Loading...</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
 
 <script>
-const videoElement = document.getElementById("video");
-const canvasElement = document.getElementById("canvas");
-const canvasCtx = canvasElement.getContext("2d");
 
-// setup hand detector
-const hands = new Hands({
-  locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-  }
-});
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const statusBox = document.getElementById("status");
 
-hands.setOptions({
-  maxNumHands: 2,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7
-});
+function draw(a,b){
+  if(!a || !b) return;
 
-hands.onResults(onResults);
-
-// draw results
-function onResults(results) {
-  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-  if (results.multiHandLandmarks) {
-    for (const landmarks of results.multiHandLandmarks) {
-      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS);
-      drawLandmarks(canvasCtx, landmarks);
-    }
-  }
+  ctx.beginPath();
+  ctx.moveTo(a.x,a.y);
+  ctx.lineTo(b.x,b.y);
+  ctx.strokeStyle="lime";
+  ctx.lineWidth=3;
+  ctx.stroke();
 }
 
-// camera start
-const camera = new Camera(videoElement, {
-  onFrame: async () => {
-    await hands.send({image: videoElement});
-  },
-  width: 640,
-  height: 480
-});
+async function start(){
 
-camera.start();
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:true
+  });
+
+  video.srcObject = stream;
+
+  await new Promise(r=>video.onloadedmetadata=r);
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  statusBox.innerText="Loading AI...";
+
+  const detector = await handPoseDetection.createDetector(
+    handPoseDetection.SupportedModels.MediaPipeHands,
+    {
+      runtime: 'tfjs',
+      modelType: 'lite'
+    }
+  );
+
+  statusBox.innerText="Hand Ready 🔥";
+
+  async function detect(){
+
+    const hands = await detector.estimateHands(video);
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    hands.forEach(hand=>{
+
+      const k = hand.keypoints;
+
+      // jari-jari (finger bones)
+      draw(k[0],k[1]);
+      draw(k[1],k[2]);
+      draw(k[2],k[3]);
+      draw(k[3],k[4]);
+
+      draw(k[0],k[5]);
+      draw(k[5],k[6]);
+      draw(k[6],k[7]);
+      draw(k[7],k[8]);
+
+      draw(k[0],k[9]);
+      draw(k[9],k[10]);
+      draw(k[10],k[11]);
+      draw(k[11],k[12]);
+
+      draw(k[0],k[13]);
+      draw(k[13],k[14]);
+      draw(k[14],k[15]);
+      draw(k[15],k[16]);
+
+      draw(k[0],k[17]);
+      draw(k[17],k[18]);
+      draw(k[18],k[19]);
+      draw(k[19],k[20]);
+
+    });
+
+    requestAnimationFrame(detect);
+  }
+
+  detect();
+}
+
+start();
+
 </script>
 
 </body>
