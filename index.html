@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Finger Skeleton</title>
+<title>Hand Tracker + Switch Camera</title>
 
 <style>
 body{
@@ -17,20 +17,27 @@ video,canvas{
   width:100vw;
   height:100vh;
 }
-#status{
+#ui{
   position:absolute;
   top:10px;
   left:10px;
-  color:white;
-  background:rgba(0,0,0,.6);
-  padding:8px;
-  font-family:Arial;
+  z-index:999;
+}
+button{
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  background:cyan;
 }
 </style>
 </head>
+
 <body>
 
-<div id="status">Loading...</div>
+<div id="ui">
+  <button onclick="switchCam()">Switch Camera</button>
+</div>
 
 <video id="video" autoplay playsinline></video>
 <canvas id="canvas"></canvas>
@@ -45,8 +52,39 @@ video,canvas{
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const statusBox = document.getElementById("status");
 
+let currentMode = "environment";
+let detector;
+let stream;
+
+// 🔥 SWITCH CAMERA
+async function switchCam(){
+  currentMode = currentMode === "user" ? "environment" : "user";
+  await startCamera();
+}
+
+// 📷 START CAMERA
+async function startCamera(){
+
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+  }
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{
+      facingMode: currentMode
+    }
+  });
+
+  video.srcObject = stream;
+  await new Promise(r=>video.onloadedmetadata=r);
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+}
+
+// 🖐️ DRAW LINE
 function draw(a,b){
   if(!a || !b) return;
 
@@ -58,72 +96,66 @@ function draw(a,b){
   ctx.stroke();
 }
 
-async function start(){
+// 🤖 INIT AI
+async function initAI(){
 
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video:true
-  });
-
-  video.srcObject = stream;
-
-  await new Promise(r=>video.onloadedmetadata=r);
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  statusBox.innerText="Loading AI...";
-
-  const detector = await handPoseDetection.createDetector(
+  detector = await handPoseDetection.createDetector(
     handPoseDetection.SupportedModels.MediaPipeHands,
     {
-      runtime: 'tfjs',
-      modelType: 'lite'
+      runtime:"tfjs",
+      modelType:"lite"
     }
   );
 
-  statusBox.innerText="Hand Ready 🔥";
+}
 
-  async function detect(){
+// 🔄 DETECT LOOP
+async function detect(){
 
-    const hands = await detector.estimateHands(video);
+  const hands = await detector.estimateHands(video);
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    hands.forEach(hand=>{
+  hands.forEach(hand=>{
 
-      const k = hand.keypoints;
+    const k = hand.keypoints;
 
-      // jari-jari (finger bones)
-      draw(k[0],k[1]);
-      draw(k[1],k[2]);
-      draw(k[2],k[3]);
-      draw(k[3],k[4]);
+    // ibu jari
+    draw(k[0],k[1]);
+    draw(k[1],k[2]);
+    draw(k[2],k[3]);
+    draw(k[3],k[4]);
 
-      draw(k[0],k[5]);
-      draw(k[5],k[6]);
-      draw(k[6],k[7]);
-      draw(k[7],k[8]);
+    // telunjuk
+    draw(k[0],k[5]);
+    draw(k[5],k[6]);
+    draw(k[6],k[7]);
+    draw(k[7],k[8]);
 
-      draw(k[0],k[9]);
-      draw(k[9],k[10]);
-      draw(k[10],k[11]);
-      draw(k[11],k[12]);
+    // tengah
+    draw(k[9],k[10]);
+    draw(k[10],k[11]);
+    draw(k[11],k[12]);
 
-      draw(k[0],k[13]);
-      draw(k[13],k[14]);
-      draw(k[14],k[15]);
-      draw(k[15],k[16]);
+    // manis
+    draw(k[13],k[14]);
+    draw(k[14],k[15]);
+    draw(k[15],k[16]);
 
-      draw(k[0],k[17]);
-      draw(k[17],k[18]);
-      draw(k[18],k[19]);
-      draw(k[19],k[20]);
+    // kelingking
+    draw(k[17],k[18]);
+    draw(k[18],k[19]);
+    draw(k[19],k[20]);
 
-    });
+  });
 
-    requestAnimationFrame(detect);
-  }
+  requestAnimationFrame(detect);
+}
 
+// 🚀 START ALL
+async function start(){
+  await startCamera();
+  await initAI();
   detect();
 }
 
