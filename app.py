@@ -18,9 +18,10 @@ app = Flask(__name__)
 # 💡 UBAH VERSI PATCH DI SINI KALAU GARENA UPDATE GAME
 CURRENT_VERSION = "OB54" 
 
+import os  # Pastikan os sudah di-import di bagian paling atas skrip
+
 def load_tokens(server_name):
     try:
-        # Sudah diubah dari "IND" ke "ID"
         if server_name == "ID":
             filename = "token_ind.json" 
         elif server_name in {"BR", "US", "SAC", "NA"}:
@@ -28,7 +29,11 @@ def load_tokens(server_name):
         else:
             filename = "token_bd.json"
             
-        with open(filename, "r") as f:
+        # 🛠️ PERBAIKAN PATH ABSOLUT UNTUK VERCEL
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.join(base_dir, filename)
+            
+        with open(full_path, "r") as f:
             data = json.load(f)
             if isinstance(data, list) and len(data) > 0 and 'token' in data[0]:
                 return data
@@ -37,6 +42,7 @@ def load_tokens(server_name):
             else:
                 return []
     except FileNotFoundError:
+        print(f"File tidak ditemukan di: {full_path}")
         return []
     except Exception as e:
         print(f"Error loading tokens: {e}")
