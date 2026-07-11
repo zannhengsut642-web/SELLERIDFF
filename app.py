@@ -15,10 +15,14 @@ import random
 
 app = Flask(__name__)
 
+# 💡 UBAH VERSI PATCH DI SINI KALAU GARENA UPDATE GAME
+CURRENT_VERSION = "OB54" 
+
 def load_tokens(server_name):
     try:
-        if server_name == "IND":
-            filename = "token_ind.json"
+        # Sudah diubah dari "IND" ke "ID"
+        if server_name == "ID":
+            filename = "token_ind.json" 
         elif server_name in {"BR", "US", "SAC", "NA"}:
             filename = "token_br.json"
         else:
@@ -60,7 +64,7 @@ async def send_request(encrypted_uid, token, url, semaphore):
             'Authorization': f"Bearer {token}",
             'Content-Type': "application/x-www-form-urlencoded",
             'X-GA': "v1 1",
-            'ReleaseVersion': "OB54"
+            'ReleaseVersion': CURRENT_VERSION
         }
         try:
             async with aiohttp.ClientSession() as session:
@@ -92,9 +96,6 @@ async def send_multiple_requests(uid, server_name, url):
     
     if tasks:
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        successful = sum(1 for r in results if r == 200)
-        failed = sum(1 for r in results if r != 200 and not isinstance(r, Exception))
-        
         return results
     return []
 
@@ -118,8 +119,9 @@ def decode_protobuf(binary):
         return None
 
 def make_request(encrypt, server_name, token):
-    if server_name == "IND":
-        url = "https://client.ind.freefiremobile.com/GetPlayerPersonalShow"
+    # Perbaikan Indentasi & Mengubah IND menjadi ID
+    if server_name == "ID":
+        url = "https://client.id.freefiremobile.com/GetPlayerPersonalShow"
     elif server_name in {"BR", "US", "SAC", "NA"}:
         url = "https://client.us.freefiremobile.com/GetPlayerPersonalShow"
     else:
@@ -131,7 +133,7 @@ def make_request(encrypt, server_name, token):
         'Authorization': f"Bearer {token}",
         'Content-Type': "application/x-www-form-urlencoded",
         'X-GA': "v1 1",
-        'ReleaseVersion': "OB54"
+        'ReleaseVersion': CURRENT_VERSION
     }
 
     try:
@@ -171,14 +173,14 @@ def handle_requests():
         print(f"Before parse error: {e}")
         return jsonify({"error": "Data parsing failed", "status": 0}), 200
 
-    if server_name == "IND":
-        url = "https://client.ind.freefiremobile.com/LikeProfile"
+    # Menyambungkan routing endpoint LikeProfile ke server .id
+    if server_name == "ID":
+        url = "https://client.id.freefiremobile.com/LikeProfile"
     elif server_name in {"BR", "US", "SAC", "NA"}:
         url = "https://client.us.freefiremobile.com/LikeProfile"
     else:
         url = "https://clientbp.ggpolarbear.com/LikeProfile"
 
-    # Vercel pe async properly handle karo
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -201,7 +203,7 @@ def handle_requests():
         player_id = int(account_info.get('UID', 0))
         name = str(account_info.get('PlayerNickname', ''))
         level = int(account_info.get('Levels', 0))
-        region = str(account_info.get('PlayerRegion', ''))  # ✅ REGION ADD KARO
+        region = str(account_info.get('PlayerRegion', ''))
         
         if level == 0 and hasattr(after, 'AccountInfo') and hasattr(after.AccountInfo, 'Levels'):
             level = int(after.AccountInfo.Levels)
@@ -223,6 +225,5 @@ def handle_requests():
     except Exception as e:
         return jsonify({"error": str(e), "status": 0}), 500
 
-# ✅ Vercel ke liye yeh important hai
 if __name__ == '__main__':
     app.run()
